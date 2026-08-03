@@ -1,0 +1,11 @@
+# English-only gate allowlist (tools/check_language.py).
+#
+#   glob:<pattern>   exempts a whole file
+#   <substring>      any line containing it is skipped
+#
+# Keep this list short. Translating is almost always the right fix; an entry
+# here is for text that is legitimately not English -- an encoding fixture, a
+# locale file, or a quoted upstream string.
+
+# The gate's own word list is German by definition.
+glob:tools/check_language.py

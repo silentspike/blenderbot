@@ -1,0 +1,27 @@
+name: Dependabot auto-merge
+
+# Dependency PRs merge themselves once the branch gate is green. The gate is the
+# control, not a human read of a version bump.
+on: pull_request_target
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    name: automerge
+    runs-on: ubuntu-latest
+    # Both conditions matter. `github.actor` is authenticated by GitHub and cannot
+    # be spoofed, and the head-repo check makes sure this never arms auto-merge on
+    # anything coming from a fork. This job deliberately never checks out the PR's
+    # code - `pull_request_target` runs with write permissions in the base repo.
+    if: >-
+      github.actor == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"

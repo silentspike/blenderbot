@@ -1,0 +1,25 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  conventional:
+    name: conventional
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const re = /^(feat|fix|docs|refactor|perf|test|build|ci|chore|deps|spike)(\([^)]+\))?!?:\s.+/;
+            if (!re.test(title)) {
+              core.setFailed(
+                'PR title must follow Conventional Commits, e.g. "feat(control): add standstill detection".\n' +
+                'Allowed types: feat, fix, docs, refactor, perf, test, build, ci, chore, deps, spike'
+              );
+            }

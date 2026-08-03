@@ -1,0 +1,79 @@
+name: PR (dev)
+
+# Fast gate for PRs into `dev`: work must be able to land quickly.
+# A `changes` filter gates the expensive steps, but every job itself always runs
+# and reports, so branch protection is never left waiting on a skipped job.
+on:
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read # dorny/paths-filter reads the PR's changed-file list via the API
+
+concurrency:
+  group: pr-dev-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
+      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        id: filter
+        with:
+          filters: |
+            code:
+              - '**/*.py'
+              - 'pyproject.toml'
+              - 'db/migrations/**'
+              - '.github/workflows/**'
+
+  dev-checks:
+    name: dev-checks
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
+      - name: No code/CI changes - skip the compile gate
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No Python/config/CI changes in this PR - checks skipped."
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        if: needs.changes.outputs.code == 'true'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install
+        if: needs.changes.outputs.code == 'true'
+        run: pip install --quiet -e ".[dev]"
+      - name: Format
+        if: needs.changes.outputs.code == 'true'
+        run: ruff format --check src tests tools
+      - name: Lint
+        if: needs.changes.outputs.code == 'true'
+        run: ruff check src tests tools
+      - name: Types
+        if: needs.changes.outputs.code == 'true'
+        run: mypy
+      - name: Unit tests
+        if: needs.changes.outputs.code == 'true'
+        # Coverage gate: the suite is the evidence, so a drop below the bar is a
+        # failure, not a warning.
+        run: pytest --cov=blenderbot --cov-report=term-missing --cov-fail-under=75
+
+  dependency-review:
+    name: dependency-review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high

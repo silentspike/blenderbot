@@ -1,0 +1,71 @@
+name: External PR guard
+
+# No foreign code enters this repository. All development is done by the org;
+# a pull request from a fork is closed automatically with an explanation.
+#
+# Why this exists even with branch protection: on a public repository anyone can
+# fork and open a PR. Protection stops it from *merging*, but the PR still sits
+# there, still triggers workflow runs, and still puts unreviewed code one careless
+# click away from a maintainer's approval. This closes it instead.
+#
+# `pull_request_target` runs in the context of the BASE repository, so it has the
+# write permission needed to close the PR - and it deliberately never checks out
+# the PR's head, which is the mistake that turns this trigger into a code
+# execution vector.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: external-pr-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: external-pr-guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const headRepo = pr.head.repo ? pr.head.repo.full_name : null;
+            const baseRepo = `${context.repo.owner}/${context.repo.repo}`;
+
+            if (headRepo === baseRepo) {
+              core.info(`branch PR from ${headRepo} - allowed`);
+              return;
+            }
+
+            const base = `https://github.com/${baseRepo}`;
+            const msg =
+              `Hi @${pr.user.login}, thanks for taking the time to write this.\n\n` +
+              'This pull request was closed automatically because blenderbot does not ' +
+              'accept pull requests from forks. That is about the code path only - your ' +
+              'idea is genuinely welcome, and there is a direct way to bring it in:\n\n' +
+              `- **Suggesting a change or a new capability** - ` +
+              `[open a feature request](${base}/issues/new?template=feature_request.yml)\n` +
+              `- **Reporting something broken** - ` +
+              `[open a bug report](${base}/issues/new?template=bug_report.yml)\n` +
+              `- **A security problem** - ` +
+              `[open a private advisory](${base}/security/advisories/new) rather than a public issue\n\n` +
+              'If you describe there what this PR does and why, it will be read and ' +
+              'considered.';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: msg,
+            });
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              state: 'closed',
+            });
+            core.setFailed(`external pull request from ${headRepo} closed`);

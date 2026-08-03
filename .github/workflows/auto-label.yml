@@ -1,0 +1,89 @@
+name: Auto Label
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  label:
+    name: auto-label
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const isIssue = !!context.payload.issue;
+            const obj = context.payload.issue || context.payload.pull_request;
+            const title = obj.title.toLowerCase();
+            const labels = new Set();
+
+            // An issue from someone without write access is a request, and is
+            // routed to the triage queue rather than the planned work list.
+            //
+            // Permission level rather than org membership: membership can be
+            // private, in which case the org check fails and misfiles the issue.
+            let hasWriteAccess = false;
+            try {
+              const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: obj.user.login,
+              });
+              hasWriteAccess = ["admin", "maintain", "write"].includes(data.permission);
+            } catch {
+              hasWriteAccess = false;
+            }
+
+            if (isIssue && !hasWriteAccess) {
+              // Triage queue.
+              labels.add('external');
+              labels.add('status:triage');
+              const arr = [...labels];
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: obj.number, labels: arr,
+              });
+              // Strip any work-item label the template may have set.
+              for (const stale of ['type:epic', 'type:story', 'type:task', 'status:backlog']) {
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner, repo: context.repo.repo,
+                    issue_number: obj.number, name: stale,
+                  });
+                } catch { /* label was not set */ }
+              }
+              core.info(`issue from ${obj.user.login} - routed to triage`);
+              return;
+            }
+
+            if (isIssue) {
+              labels.add('status:backlog');
+              if (/\[epic\]|^e-/.test(title)) { labels.add('type:epic'); labels.add('priority:high'); }
+              else if (/\[story\]|^s-/.test(title)) { labels.add('type:story'); }
+              else if (/\[task\]|^t-/.test(title)) { labels.add('type:task'); }
+            }
+
+            const stripped = title.replace(/^\[[^\]]+\]\s*/, '');
+            if (/^(feat)(\(|:)/.test(stripped)) labels.add('type:feature');
+            else if (/^(fix)(\(|:)/.test(stripped)) labels.add('type:bug');
+            else if (/^(docs)(\(|:)/.test(stripped)) labels.add('type:docs');
+            else if (/^(refactor)(\(|:)/.test(stripped)) labels.add('type:refactor');
+            else if (/^(ci)(\(|:)/.test(stripped)) labels.add('type:ci');
+            else if (/^(spike)(\(|:)/.test(stripped)) labels.add('type:spike');
+            else if (/^(deps)(\(|:)|chore\(deps\)/.test(stripped)) labels.add('type:deps');
+
+            if (!isIssue && obj.user && obj.user.login === 'dependabot[bot]') labels.add('type:deps');
+
+            const arr = [...labels];
+            if (arr.length) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: obj.number, labels: arr,
+              });
+            }

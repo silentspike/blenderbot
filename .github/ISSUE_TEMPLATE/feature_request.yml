@@ -1,0 +1,32 @@
+name: Feature request or suggestion
+description: Suggest a capability or a change. Open to everyone.
+title: "[Request] "
+labels:
+  - "external"
+  - "status:triage"
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Suggestions are welcome and genuinely read. Pull requests from forks are
+        not accepted, so this is the way to propose a change.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is the problem?
+      description: What are you trying to do, and what stops you today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Optional.
+    validations:
+      required: false

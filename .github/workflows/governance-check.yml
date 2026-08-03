@@ -1,0 +1,73 @@
+name: Governance Check
+
+# Two rules: a high-blast-radius surface cannot change without being labelled as
+# such, and `main` stays reachable only through the automated promotion.
+on:
+  pull_request:
+    branches: [dev, staging, main]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: governance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  risk:
+    name: risk-policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const paths = files.map(file => file.filename);
+            const matches = prefix => paths.some(p => p === prefix || p.startsWith(`${prefix}/`));
+            const required = new Set();
+
+            // The state machine and its generated tables are the single source of
+            // the run order: a change here moves the ground truth for all work in flight.
+            if (['src/blenderbot/flow'].some(matches)) required.add('risk:state-machine');
+            // Schema changes invalidate stored runs and every analysis built on them.
+            if (['db/migrations', 'src/blenderbot/db'].some(matches)) required.add('risk:data-contract');
+            // The provider wire contract and the agent loop decide what every role sees.
+            if (['src/blenderbot/harness'].some(matches)) required.add('risk:harness');
+            if (['.github/workflows'].some(matches)) required.add('risk:infra');
+
+            let missing = [...required];
+            for (let attempt = 0; attempt < 7 && missing.length > 0; attempt += 1) {
+              const current = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+              });
+              const labels = new Set(current.data.labels.map(l => l.name));
+              missing = [...required].filter(l => !labels.has(l));
+              if (missing.length > 0 && attempt < 6) {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              }
+            }
+            if (missing.length > 0) {
+              core.setFailed(
+                `Missing required risk labels: ${missing.join(', ')}.\n` +
+                'A change to this surface has a wide blast radius; label it so it is ' +
+                'visible in review.'
+              );
+            }
+
+            if (pr.base.ref === 'main') {
+              const validHead = pr.head.ref.startsWith('promote/staging-to-main-');
+              const validTitle = pr.title === 'chore: promote staging to main (auto)';
+              if (!validHead || !validTitle) {
+                core.setFailed('Only automated staging-to-main promotion PRs may target main.');
+              }
+            }

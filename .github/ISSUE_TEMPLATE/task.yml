@@ -1,0 +1,83 @@
+name: Task
+description: A concrete implementation unit within an approved story or epic.
+title: "[Task] T-X.Y: "
+labels:
+  - "type:task"
+  - "status:backlog"
+body:
+  - type: input
+    id: parent
+    attributes:
+      label: Parent issue
+      placeholder: "#23"
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Owner
+      description: Who implements this. Exactly one owner.
+      placeholder: "worker-1"
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal and baseline
+      description: >
+        One concrete observable outcome, plus the current behaviour on the
+        target branch. Do not require private history to understand it.
+    validations:
+      required: true
+  - type: textarea
+    id: shared_resources
+    attributes:
+      label: Shared resources
+      description: Exact files, modules, schemas and runtime resources touched.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope
+      description: Exact files, behaviour and mutation boundaries.
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Objective completion criteria, one per line.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification plan
+      description: >
+        Commands, expected output, evidence. Prove that filtered tests actually
+        matched and executed — a test selector that matches nothing passes.
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback and failure handling
+      description: Rollback path, idempotency, behaviour on partial failure.
+    validations:
+      required: true
+  - type: dropdown
+    id: plan_review
+    attributes:
+      label: Plan review status
+      options:
+        - Pending review
+        - Approved
+    validations:
+      required: true

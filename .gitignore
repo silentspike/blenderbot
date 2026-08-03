@@ -1,0 +1,37 @@
+# Generated stores — rebuilt from source, never versioned
+graph/
+assets/
+scenes/
+runs/
+*.blend1
+
+# Secrets and databases
+.env
+*.key
+*.pem
+*.db
+*.sqlite
+*.duckdb
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+coverage.xml
+htmlcov/
+
+# Agent state
+.claude/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store

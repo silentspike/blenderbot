@@ -1,0 +1,81 @@
+name: PR (main)
+
+# Release-grade gate. Aggregated into a single required check, `main-pass`.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-main-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  checks:
+    name: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install --quiet -e ".[dev]"
+      - run: ruff format --check src tests tools
+      - run: ruff check src tests tools
+      - run: mypy
+      - run: pytest --cov=blenderbot --cov-report=term-missing --cov-fail-under=75
+
+  vuln-scan:
+    name: vuln-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Audit dependencies for known vulnerabilities
+        run: |
+          pip install --quiet pip-audit==2.9.0
+          pip install --quiet -e .
+          pip-audit --strict --desc
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Build distribution
+        run: |
+          pip install --quiet build
+          python -m build
+      - name: Verify the wheel imports
+        run: |
+          pip install --quiet dist/*.whl
+          python -c "import blenderbot; print(blenderbot.__version__)"
+
+  main-pass:
+    name: main-pass
+    needs: [checks, vuln-scan, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify every upstream job succeeded
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -q '"result": *"\(failure\|cancelled\|skipped\)"'; then
+            echo "::error::at least one main gate did not succeed"
+            exit 1
+          fi
+          echo "all main gates succeeded"

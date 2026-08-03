@@ -1,0 +1,40 @@
+name: Bug report
+description: Report something that behaves incorrectly. Open to everyone.
+title: "[Bug] "
+labels:
+  - "external"
+  - "type:bug"
+  - "status:triage"
+body:
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened?
+      description: What did you observe, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The exact commands or steps, and their actual output.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `blenderbot --version`.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: >
+        Output of `blenderbot doctor`. Remove anything you do not want public —
+        never paste a credential or a connection string with a password.
+      render: shell
+    validations:
+      required: false

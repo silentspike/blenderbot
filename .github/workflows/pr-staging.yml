@@ -1,0 +1,105 @@
+name: PR (staging)
+
+# Pre-production gate: everything `dev` runs, plus the integration suite against
+# a real PostgreSQL. Aggregated into a single required check, `staging-pass`.
+on:
+  pull_request:
+    branches: [staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-staging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  checks:
+    name: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install --quiet -e ".[dev]"
+      - run: ruff format --check src tests tools
+      - run: ruff check src tests tools
+      - run: mypy
+      - run: pytest --cov=blenderbot --cov-report=term-missing --cov-fail-under=75
+
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18@sha256:3a82e1f56c8f0f5616a11103ac3d47e632c3938698946a7ad26da0df1334744a
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: blenderbot_ci
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      BLENDERBOT_DSN: postgresql://postgres:ci@localhost:5432/blenderbot_ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install --quiet -e ".[dev]"
+      - name: Apply migrations
+        run: |
+          if [ -d db/migrations ] && ls db/migrations/*.sql >/dev/null 2>&1; then
+            for f in db/migrations/*.sql; do
+              echo "applying $f"
+              psql "$BLENDERBOT_DSN" -v ON_ERROR_STOP=1 -f "$f"
+            done
+          else
+            echo "no migrations yet"
+          fi
+      - name: Integration tests
+        # -m integration selects the marked suite. `--strict-markers` in
+        # pyproject makes an unknown marker an error, and the exit-5 check below
+        # makes an *empty* selection an error too: a filter that matches nothing
+        # would otherwise pass silently.
+        run: |
+          set +e
+          pytest -m integration
+          rc=$?
+          set -e
+          if [ "$rc" -eq 5 ]; then
+            echo "::error::no integration tests were collected - the marker filter matched nothing"
+            exit 1
+          fi
+          exit "$rc"
+
+  staging-pass:
+    name: staging-pass
+    needs: [checks, integration]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify every upstream job succeeded
+        # Aggregating into one required check only works if a skipped or
+        # cancelled upstream job fails it too - otherwise the gate reports green
+        # without anything having run.
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -q '"result": *"\(failure\|cancelled\|skipped\)"'; then
+            echo "::error::at least one staging gate did not succeed"
+            exit 1
+          fi
+          echo "all staging gates succeeded"
