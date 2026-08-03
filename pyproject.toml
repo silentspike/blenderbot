@@ -55,3 +55,6 @@ files = ["src", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+markers = [
+    "integration: needs a real PostgreSQL, selected by BLENDERBOT_DSN",
+]
