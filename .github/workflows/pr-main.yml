@@ -41,10 +41,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Audit dependencies for known vulnerabilities
+        # --skip-editable: the project itself is installed editable and is not on
+        # PyPI, so pip-audit cannot resolve it and --strict would fail on that
+        # alone. The dependencies are what this job is here to audit.
         run: |
           pip install --quiet pip-audit==2.9.0
           pip install --quiet -e .
-          pip-audit --strict --desc
+          pip-audit --strict --desc --skip-editable
 
   build:
     name: build
