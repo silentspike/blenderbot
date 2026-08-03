@@ -83,3 +83,12 @@ def test_run_reports_a_missing_binary_instead_of_raising() -> None:
     code, output = environment._run(["definitely-not-a-binary-xyz"])
     assert code == 127
     assert "not found" in output
+
+
+def test_parse_version_reads_the_first_dotted_number() -> None:
+    assert environment._parse_version("Blender 5.2.0 (hash abc)") == (5, 2, 0)
+    assert environment._parse_version("Blender 5.2 LTS") == (5, 2)
+
+
+def test_parse_version_returns_none_without_one() -> None:
+    assert environment._parse_version("Blender (unknown build)") is None
