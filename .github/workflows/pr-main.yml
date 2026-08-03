@@ -40,11 +40,17 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Audit dependencies for known vulnerabilities
+      - name: Audit this project's dependencies for known vulnerabilities
+        # Audit what the project actually depends on, resolved fresh, rather than
+        # the whole runner environment: the runner's own pip and setuptools are
+        # not something this project ships, and a CVE in them would fail the gate
+        # for a reason unrelated to the change under review.
         run: |
+          set -euo pipefail
           pip install --quiet pip-audit==2.9.0
-          pip install --quiet -e .
-          pip-audit --strict --desc
+          pip install --quiet --dry-run --ignore-installed --report report.json .
+          python3 tools/resolve_dependencies.py report.json audited-requirements.txt
+          pip-audit --strict --desc --requirement audited-requirements.txt
 
   build:
     name: build

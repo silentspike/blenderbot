@@ -50,8 +50,11 @@ select = [
 python_version = "3.11"
 strict = true
 warn_unreachable = true
-files = ["src", "tests"]
+files = ["src", "tests", "tools"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+markers = [
+    "integration: needs a real PostgreSQL, selected by BLENDERBOT_DSN",
+]
