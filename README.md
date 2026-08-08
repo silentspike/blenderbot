@@ -17,21 +17,22 @@ instruction:
 
 | Role | Tools | Sees |
 |---|---|---|
-| **Editor** | 6 (query, set, build, execute, render, fetch) | the scene, its own history, the findings |
-| **Observer** | 1 (crop) | two images, nothing else — no history, no scene access |
-| **Comparator** | 0 | two finding lists, to detect standstill |
-| **Learning session** | 3 + 1 | the run database, to propose improvements |
+| **Editor** | 6 (`knowledge`, `set_value`, `build`, `execute`, `image`, `fetch`) | the scene, its own history, the findings |
+| **Observer** | 1 (`crop`) | only the prepared image input and approved requirements for the job kind — no history or scene access |
+| **Learning session** | 3 | retained run evidence, to propose measured improvements |
 
 The observer has no way to know where work was done, so it has no bias to
 protect. That is the whole mechanism.
 
 ## Status
 
-Design complete, implementation starting.
+The implementation program is being established. Product implementation has not
+started. Release-candidate milestones and implementation contracts are tracked
+in GitHub issues.
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.13
 - Blender 5.2 LTS
 - PostgreSQL 18
 

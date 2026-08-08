@@ -79,6 +79,16 @@ body:
       description: Owner gates, external waits, rollback constraints.
     validations:
       required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Authority, stop and landing contract
+      description: >
+        Who may claim child work, which shared effect lanes are exclusive, what
+        stops the epic, which branch receives changes, and who may approve a
+        promotion or release. Transport delivery is not work authority.
+    validations:
+      required: true
   - type: dropdown
     id: plan_review
     attributes:

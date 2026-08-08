@@ -20,6 +20,14 @@ body:
       placeholder: "worker-1"
     validations:
       required: true
+  - type: input
+    id: dependencies
+    attributes:
+      label: Depends on / Blocks
+      description: Issue numbers and whether each dependency has landed.
+      placeholder: "None; blocks #17"
+    validations:
+      required: true
   - type: textarea
     id: goal
     attributes:
@@ -57,6 +65,15 @@ body:
     validations:
       required: true
   - type: textarea
+    id: trace
+    attributes:
+      label: End-to-end contract trace
+      description: >
+        Producer, transport, persistence, recovery, consumer and observable
+        effect. Use "not applicable" only with a concrete reason.
+    validations:
+      required: true
+  - type: textarea
     id: verification
     attributes:
       label: Verification plan
@@ -70,6 +87,22 @@ body:
     attributes:
       label: Rollback and failure handling
       description: Rollback path, idempotency, behaviour on partial failure.
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy and evidence boundary
+      description: What must be redacted or excluded, and where evidence is stored.
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Authority, effect lane and stop conditions
+      description: >
+        Claim owner, semantic ownership, exclusive shared effect lane if any,
+        landing branch and the condition that parks or stops the task.
     validations:
       required: true
   - type: dropdown

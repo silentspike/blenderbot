@@ -69,6 +69,24 @@ body:
     validations:
       required: true
   - type: textarea
+    id: trace
+    attributes:
+      label: End-to-end contract trace
+      description: >
+        Trace producer to transport to persistence to recovery to consumer.
+        Name the versioned contract at every boundary and the observable effect.
+    validations:
+      required: true
+  - type: textarea
+    id: failure_privacy
+    attributes:
+      label: Failure, race, recovery and privacy cases
+      description: >
+        Negative inputs, duplicate or concurrent execution, interruption and
+        restart behaviour, rollback, and data that must never enter evidence.
+    validations:
+      required: true
+  - type: textarea
     id: verification
     attributes:
       label: Verification plan
@@ -76,6 +94,16 @@ body:
         Commands and the evidence each produces. Cheap focused checks while
         iterating, the full required gate once at candidate freeze. Name the
         surfaces that are explicitly not required.
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Authority, effect lane and stop conditions
+      description: >
+        Claim owner, semantic ownership boundary, exclusive shared effect lane
+        if any, branch/landing target, and the exact condition that parks or
+        stops implementation.
     validations:
       required: true
   - type: dropdown

@@ -77,3 +77,38 @@ PR. This is deliberate for a single-maintainer repository — an approval only t
 same person can give is ceremony, not safety. The compensating control is the
 required-checks gate, which a self-approval cannot bypass, plus `enforce_admins`
 on `main`. When a second maintainer joins, raise the count to 1.
+
+## Parallel agent delivery
+
+Codex is the only orchestration role. Interactive Claude sessions are the
+default implementation workers. This choice is an execution policy, not product
+architecture: blenderbot itself must remain able to use either supported model
+provider or both.
+
+Every worker lane obeys these rules:
+
+- A GitHub issue is the work authority. Transport delivery, a running process or
+  a model response is not proof that work was claimed or completed.
+- A worker claims exactly one foreground mutation issue and works in one
+  persistent, project-bound worktree. The claim records the issue, role,
+  worktree, branch, session and generation.
+- Worker-to-worker messages are denied. Workers send semantic acknowledgements,
+  evidence, blockers and results to the Codex orchestrator; the orchestrator
+  schedules all follow-up work.
+- A delivered message is not an acknowledgement. The worker must acknowledge
+  the message identifier and restate the issue, branch and intended action.
+- Parallel ownership is semantic. Two issues may touch the same file only when
+  their owned symbols or sections are disjoint and named in both issues.
+- Shared migrations, generated contracts, flow specifications and release
+  branches use short, exclusive effect lanes. A worker releases its ordinary
+  slot while waiting for such a lane.
+- Blocked, review-only and merge-ready work is parked so another independent
+  issue can use the worker slot.
+- The public issue and repository must contain every requirement needed for the
+  task. Private plans, prior chats and local paths are never implementation
+  dependencies.
+- Completion requires a semantic result plus GitHub and repository readback:
+  exact commit, executed checks, evidence location and remaining limitations.
+
+The durable control ledger and the owner-facing control room are projections of
+these facts. Neither is allowed to invent completion from terminal activity.
