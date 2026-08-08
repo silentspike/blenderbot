@@ -7,10 +7,12 @@ project is developed and what every change has to clear.
 repository. A PR opened from a fork is closed automatically by
 `external-pr-guard.yml`.
 
-**Suggestions and bug reports are welcome**, and they are read. Please open an
-issue using the *Feature request or suggestion* or *Bug report* template — that
-is the way to propose a change here. For a security problem, use a private
-security advisory rather than a public issue.
+**Suggestions and bug reports are welcome**, and they are read in the separate
+[blenderbot feedback tracker](https://github.com/silentspike/blenderbot-feedback/issues/new/choose).
+The product repository's issue tracker is reserved for approved implementation
+work; external issues opened here are redirected and closed automatically. For a
+security problem, use a private security advisory rather than either public
+issue tracker.
 
 ## Ground rules
 

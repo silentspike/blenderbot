@@ -46,6 +46,13 @@ just test
 Branches flow `dev` → `staging` → `main`, each with a stricter gate than the
 last. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Feedback
+
+Ideas and bug reports belong in the separate
+[blenderbot feedback tracker](https://github.com/silentspike/blenderbot-feedback/issues/new/choose).
+This repository's issues are reserved for approved implementation work, and
+external pull requests are closed automatically.
+
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE).

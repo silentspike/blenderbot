@@ -42,15 +42,14 @@ jobs:
             }
 
             const base = `https://github.com/${baseRepo}`;
+            const feedback = 'https://github.com/silentspike/blenderbot-feedback';
             const msg =
               `Hi @${pr.user.login}, thanks for taking the time to write this.\n\n` +
               'This pull request was closed automatically because blenderbot does not ' +
               'accept pull requests from forks. That is about the code path only - your ' +
               'idea is genuinely welcome, and there is a direct way to bring it in:\n\n' +
-              `- **Suggesting a change or a new capability** - ` +
-              `[open a feature request](${base}/issues/new?template=feature_request.yml)\n` +
-              `- **Reporting something broken** - ` +
-              `[open a bug report](${base}/issues/new?template=bug_report.yml)\n` +
+              `- **Suggesting a change or reporting a bug** - ` +
+              `[open a feedback issue](${feedback}/issues/new/choose)\n` +
               `- **A security problem** - ` +
               `[open a private advisory](${base}/security/advisories/new) rather than a public issue\n\n` +
               'If you describe there what this PR does and why, it will be read and ' +
