@@ -3,10 +3,9 @@ name: External PR guard
 # No foreign code enters this repository. All development is done by the org;
 # a pull request from a fork is closed automatically with an explanation.
 #
-# Why this exists even with branch protection: on a public repository anyone can
-# fork and open a PR. Protection stops it from *merging*, but the PR still sits
-# there, still triggers workflow runs, and still puts unreviewed code one careless
-# click away from a maintainer's approval. This closes it instead.
+# Repository settings already restrict PR creation to collaborators. This guard
+# is the fail-closed second layer if that setting drifts or an older/existing PR
+# is reopened: it closes the PR without evaluating external code.
 #
 # `pull_request_target` runs in the context of the BASE repository, so it has the
 # write permission needed to close the PR - and it deliberately never checks out

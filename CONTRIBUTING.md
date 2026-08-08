@@ -3,9 +3,9 @@
 All development is done by the silentspike org. This document describes how the
 project is developed and what every change has to clear.
 
-**External pull requests are not accepted.** No foreign code enters this
-repository. A PR opened from a fork is closed automatically by
-`external-pr-guard.yml`.
+**External pull requests are not accepted.** Repository settings restrict pull
+request creation to collaborators. `external-pr-guard.yml` is a second layer
+that closes and redirects any external PR that still reaches the repository.
 
 **Suggestions and bug reports are welcome**, and they are read in the separate
 [blenderbot feedback tracker](https://github.com/silentspike/blenderbot-feedback/issues/new/choose).

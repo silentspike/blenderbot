@@ -51,7 +51,7 @@ last. See [CONTRIBUTING.md](CONTRIBUTING.md).
 Ideas and bug reports belong in the separate
 [blenderbot feedback tracker](https://github.com/silentspike/blenderbot-feedback/issues/new/choose).
 This repository's issues are reserved for approved implementation work, and
-external pull requests are closed automatically.
+external users cannot open pull requests.
 
 ## License
 
