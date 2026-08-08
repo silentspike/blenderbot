@@ -1,9 +1,8 @@
 name: External issue guard
 
-# The product tracker contains approved implementation work only. GitHub does
-# not provide collaborator-only issues on a public repository, so any external
-# issue opened directly (including through the API) is redirected and closed.
-# The workflow never checks out code or evaluates issue content.
+# Repository settings restrict issue creation to collaborators. This guard is
+# the fail-closed second layer if that setting drifts or an older/existing issue
+# is reopened. It never checks out code or evaluates issue content.
 on:
   issues:
     types: [opened, reopened]

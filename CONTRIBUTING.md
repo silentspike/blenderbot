@@ -9,10 +9,10 @@ that closes and redirects any external PR that still reaches the repository.
 
 **Suggestions and bug reports are welcome**, and they are read in the separate
 [blenderbot feedback tracker](https://github.com/silentspike/blenderbot-feedback/issues/new/choose).
-The product repository's issue tracker is reserved for approved implementation
-work; external issues opened here are redirected and closed automatically. For a
-security problem, use a private security advisory rather than either public
-issue tracker.
+Repository settings restrict this product tracker to collaborators, so external
+feedback cannot enter the implementation pool. `external-issue-guard.yml` is a
+second layer if that setting drifts. For a security problem, use a private
+security advisory rather than either public issue tracker.
 
 ## Ground rules
 
