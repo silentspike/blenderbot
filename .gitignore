@@ -31,6 +31,9 @@ htmlcov/
 # Agent state
 .claude/
 
+# Internal plans live in the separate private planning tree.
+/docs/
+
 # Editors and OS
 .idea/
 .vscode/

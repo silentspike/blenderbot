@@ -1,7 +1,7 @@
 name: Governance Check
 
 # Two rules: a high-blast-radius surface cannot change without being labelled as
-# such, and `main` stays reachable only through the automated promotion.
+# such, and `main` stays reachable only through an explicit promotion PR.
 on:
   pull_request:
     branches: [dev, staging, main]
@@ -66,8 +66,8 @@ jobs:
 
             if (pr.base.ref === 'main') {
               const validHead = pr.head.ref.startsWith('promote/staging-to-main-');
-              const validTitle = pr.title === 'chore: promote staging to main (auto)';
+              const validTitle = pr.title === 'chore: promote staging to main';
               if (!validHead || !validTitle) {
-                core.setFailed('Only automated staging-to-main promotion PRs may target main.');
+                core.setFailed('Only staging-to-main promotion PRs may target main.');
               }
             }

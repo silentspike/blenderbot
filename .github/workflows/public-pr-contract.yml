@@ -1,0 +1,64 @@
+name: Public PR contract
+
+# Validate only public-safe references. Private work-item details are validated
+# outside this public repository; this workflow has no private repository access.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: public-pr-contract-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    name: public-pr-contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const baseRepo = `${context.repo.owner}/${context.repo.repo}`;
+            const headRepo = pr.head.repo ? pr.head.repo.full_name : null;
+            const body = pr.body || '';
+
+            if (pr.user.login === 'dependabot[bot]') {
+              core.info('Dependabot PR - work item reference not required');
+              return;
+            }
+
+            if (headRepo === baseRepo) {
+              const matches = [...body.matchAll(
+                /^Work item:\s*(BB-(?:E\d+|S\d+\.\d+))\s*$/gmi
+              )];
+              if (matches.length !== 1) {
+                core.setFailed(
+                  'An internal PR must contain exactly one public-safe line such as ' +
+                  '`Work item: BB-S0.1`. Do not link or copy internal issue content.'
+                );
+              }
+              return;
+            }
+
+            for (let attempt = 0; attempt < 10; attempt += 1) {
+              const current = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+              });
+              if (current.data.labels.some(label => label.name === 'external-approved')) {
+                core.info('External PR has a current accepted-feedback authorization');
+                return;
+              }
+              if (attempt < 9) {
+                await new Promise(resolve => setTimeout(resolve, 3000));
+              }
+            }
+            core.setFailed(
+              'External PR is not authorized by an accepted blenderbot-feedback issue.'
+            );

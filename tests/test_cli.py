@@ -27,7 +27,7 @@ def test_doctor_exits_zero_when_everything_passes(
     monkeypatch.setattr(
         cli,
         "run_all",
-        lambda **_: [Check("python", Status.OK, "3.11"), Check("blender", Status.OK, "5.2.0")],
+        lambda **_: [Check("python", Status.OK, "3.13"), Check("blender", Status.OK, "5.2.0")],
     )
     assert cli.main(["doctor"]) == 0
     out = capsys.readouterr().out
