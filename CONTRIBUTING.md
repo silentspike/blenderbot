@@ -1,18 +1,21 @@
 # Contributing to blenderbot
 
-All development is done by the silentspike org. This document describes how the
-project is developed and what every change has to clear.
+This document describes how blenderbot changes are proposed, tested and landed.
 
-**External pull requests are not accepted.** Repository settings restrict pull
-request creation to collaborators. `external-pr-guard.yml` is a second layer
-that closes and redirects any external PR that still reaches the repository.
+**External pull requests require an accepted feedback issue.** First open an
+issue in the public
+[blenderbot feedback tracker](https://github.com/silentspike/blenderbot-feedback/issues/new/choose).
+After the repository owner applies `status:accepted`, the same author may open a
+PR and add `Feedback: silentspike/blenderbot-feedback#123` to its body.
+`external-pr-guard.yml` validates that relationship without checking out the PR.
+GitHub requires explicit approval before any external contributor's workflow
+jobs run.
 
 **Suggestions and bug reports are welcome**, and they are read in the separate
 [blenderbot feedback tracker](https://github.com/silentspike/blenderbot-feedback/issues/new/choose).
-Repository settings restrict this product tracker to collaborators, so external
-feedback cannot enter the implementation pool. `external-issue-guard.yml` is a
-second layer if that setting drifts. For a security problem, use a private
-security advisory rather than either public issue tracker.
+This product repository does not use public issues as its planning backlog.
+`external-issue-guard.yml` redirects accidental public intake. For a security
+problem, use a private security advisory rather than either public issue tracker.
 
 ## Ground rules
 
@@ -60,9 +63,10 @@ Always-on for every PR into `dev`/`staging`/`main`: secret scan (Gitleaks),
 Conventional-Commit title check, the English-only `language-check`, the
 governance risk-label check, and auto-labeling.
 
-Merging into `dev`/`staging` auto-opens and auto-merges the next-stage
-promotion PR once the target's checks pass, so the cascade runs hands-off. A
-watchdog reports a promotion that stalls.
+Promotion is explicit and PR-only. A completed release candidate moves from
+`dev` to `staging`; an authorized candidate moves from `staging` to `main`.
+No merge into `dev` starts an automatic release cascade, and `main` does not
+publish a release by itself.
 
 **Merge strategy:** squash-only, at every hop. The three branches therefore
 carry independent histories with identical *content*; reconcile by promoting
@@ -80,37 +84,15 @@ same person can give is ceremony, not safety. The compensating control is the
 required-checks gate, which a self-approval cannot bypass, plus `enforce_admins`
 on `main`. When a second maintainer joins, raise the count to 1.
 
-## Parallel agent delivery
+## Work references and authority
 
-Codex is the only orchestration role. Interactive Claude sessions are the
-default implementation workers. This choice is an execution policy, not product
-architecture: blenderbot itself must remain able to use either supported model
-provider or both.
+Internal planning remains private. A public implementation PR contains exactly
+one neutral reference such as `Work item: BB-S0.1`; it must not link, quote or
+reveal internal issue content. A neutral ID proves only correlation. Required
+checks and the authorized merge path still decide whether the exact PR head may
+land.
 
-Every worker lane obeys these rules:
-
-- A GitHub issue is the work authority. Transport delivery, a running process or
-  a model response is not proof that work was claimed or completed.
-- A worker claims exactly one foreground mutation issue and works in one
-  persistent, project-bound worktree. The claim records the issue, role,
-  worktree, branch, session and generation.
-- Worker-to-worker messages are denied. Workers send semantic acknowledgements,
-  evidence, blockers and results to the Codex orchestrator; the orchestrator
-  schedules all follow-up work.
-- A delivered message is not an acknowledgement. The worker must acknowledge
-  the message identifier and restate the issue, branch and intended action.
-- Parallel ownership is semantic. Two issues may touch the same file only when
-  their owned symbols or sections are disjoint and named in both issues.
-- Shared migrations, generated contracts, flow specifications and release
-  branches use short, exclusive effect lanes. A worker releases its ordinary
-  slot while waiting for such a lane.
-- Blocked, review-only and merge-ready work is parked so another independent
-  issue can use the worker slot.
-- The public issue and repository must contain every requirement needed for the
-  task. Private plans, prior chats and local paths are never implementation
-  dependencies.
-- Completion requires a semantic result plus GitHub and repository readback:
-  exact commit, executed checks, evidence location and remaining limitations.
-
-The durable control ledger and the owner-facing control room are projections of
-these facts. Neither is allowed to invent completion from terminal activity.
+Each implementation change uses one feature branch and targets `dev`. Promotion
+and release are different operations with different authorization. A PR, check,
+message or commit never grants its author permission to merge, promote or
+publish a release.

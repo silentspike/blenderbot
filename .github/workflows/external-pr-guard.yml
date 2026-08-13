@@ -1,11 +1,8 @@
 name: External PR guard
 
-# No foreign code enters this repository. All development is done by the org;
-# a pull request from a fork is closed automatically with an explanation.
-#
-# Repository settings already restrict PR creation to collaborators. This guard
-# is the fail-closed second layer if that setting drifts or an older/existing PR
-# is reopened: it closes the PR without evaluating external code.
+# External code is eligible only after the owner accepts a matching issue in the
+# public feedback repository. This guard validates that contract without ever
+# checking out or executing the pull request head.
 #
 # `pull_request_target` runs in the context of the BASE repository, so it has the
 # write permission needed to close the PR - and it deliberately never checks out
@@ -13,10 +10,11 @@ name: External PR guard
 # execution vector.
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize]
+    types: [opened, edited, reopened, synchronize]
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -34,6 +32,7 @@ jobs:
             const pr = context.payload.pull_request;
             const headRepo = pr.head.repo ? pr.head.repo.full_name : null;
             const baseRepo = `${context.repo.owner}/${context.repo.repo}`;
+            const approvedLabel = 'external-approved';
 
             if (headRepo === baseRepo) {
               core.info(`branch PR from ${headRepo} - allowed`);
@@ -42,28 +41,94 @@ jobs:
 
             const base = `https://github.com/${baseRepo}`;
             const feedback = 'https://github.com/silentspike/blenderbot-feedback';
-            const msg =
-              `Hi @${pr.user.login}, thanks for taking the time to write this.\n\n` +
-              'This pull request was closed automatically because blenderbot does not ' +
-              'accept pull requests from forks. That is about the code path only - your ' +
-              'idea is genuinely welcome, and there is a direct way to bring it in:\n\n' +
-              `- **Suggesting a change or reporting a bug** - ` +
-              `[open a feedback issue](${feedback}/issues/new/choose)\n` +
-              `- **A security problem** - ` +
-              `[open a private advisory](${base}/security/advisories/new) rather than a public issue\n\n` +
-              'If you describe there what this PR does and why, it will be read and ' +
-              'considered.';
+            const marker = '<!-- blenderbot-external-pr-guard -->';
+            const reference = (pr.body || '').match(
+              /^Feedback:\s*(?:silentspike\/blenderbot-feedback#|https:\/\/github\.com\/silentspike\/blenderbot-feedback\/issues\/)(\d+)\s*$/mi
+            );
 
-            await github.rest.issues.createComment({
+            let accepted = false;
+            let reason = 'The PR body has no valid `Feedback:` line.';
+            let feedbackNumber = null;
+            if (reference) {
+              feedbackNumber = Number(reference[1]);
+              const response = await fetch(
+                `https://api.github.com/repos/silentspike/blenderbot-feedback/issues/${feedbackNumber}`,
+                {
+                  headers: {
+                    Accept: 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28',
+                    'User-Agent': 'blenderbot-external-pr-guard',
+                  },
+                }
+              );
+              if (response.ok) {
+                const issue = await response.json();
+                const labels = new Set(issue.labels.map(label => label.name));
+                const sameAuthor = issue.user.login.toLowerCase() === pr.user.login.toLowerCase();
+                accepted =
+                  !issue.pull_request &&
+                  issue.state === 'open' &&
+                  labels.has('status:accepted') &&
+                  sameAuthor;
+                if (!accepted) {
+                  reason =
+                    `Feedback issue #${feedbackNumber} must be open, carry ` +
+                    '`status:accepted`, and have the same author as this PR.';
+                }
+              } else {
+                reason = `Feedback issue #${feedbackNumber} could not be read.`;
+              }
+            }
+
+            if (accepted) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: [approvedLabel],
+              });
+              core.info(
+                `external PR by ${pr.user.login} authorized by feedback issue #${feedbackNumber}`
+              );
+              return;
+            }
+
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                name: approvedLabel,
+              });
+            } catch { /* label was not present */ }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              body: msg,
+              per_page: 100,
             });
+            if (!comments.some(comment => comment.body && comment.body.includes(marker))) {
+              const msg =
+                `${marker}\nHi @${pr.user.login}, thanks for the contribution.\n\n` +
+                'External code is accepted only after the repository owner accepts a ' +
+                `matching issue in the [feedback tracker](${feedback}/issues/new/choose). ` +
+                'The accepted issue must be open, have the same author, and carry the ' +
+                '`status:accepted` label. Then add this exact line to the PR body:\n\n' +
+                '`Feedback: silentspike/blenderbot-feedback#123`\n\n' +
+                `${reason}\n\nFor a security problem, use a ` +
+                `[private advisory](${base}/security/advisories/new).`;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: msg,
+              });
+            }
             await github.rest.pulls.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: pr.number,
               state: 'closed',
             });
-            core.setFailed(`external pull request from ${headRepo} closed`);
+            core.setFailed(`unauthorized external pull request from ${headRepo} closed`);

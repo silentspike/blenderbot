@@ -27,8 +27,8 @@ protect. That is the whole mechanism.
 ## Status
 
 The implementation program is being established. Product implementation has not
-started. Release-candidate milestones and implementation contracts are tracked
-in GitHub issues.
+started. Internal planning is not published in this repository; public PRs use
+only neutral work references.
 
 ## Requirements
 
@@ -50,8 +50,8 @@ last. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Ideas and bug reports belong in the separate
 [blenderbot feedback tracker](https://github.com/silentspike/blenderbot-feedback/issues/new/choose).
-This repository's issues and pull requests are restricted to collaborators;
-external feedback cannot enter the implementation pool.
+An external PR can be opened after the repository owner accepts the matching
+feedback issue. See [CONTRIBUTING.md](CONTRIBUTING.md) for the exact contract.
 
 ## License
 
