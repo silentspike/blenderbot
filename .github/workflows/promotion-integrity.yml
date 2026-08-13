@@ -1,0 +1,87 @@
+name: Promotion integrity
+
+# This workflow runs in the trusted base-repository context and never checks out
+# PR code. It proves that a promotion PR contains exactly the current source
+# branch tree and that no second promotion is open for the same target.
+on:
+  pull_request_target:
+    branches: [staging, main]
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: promotion-integrity-${{ github.event.pull_request.base.ref }}
+  cancel-in-progress: false
+
+jobs:
+  integrity:
+    name: promotion-integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+            const source = pr.base.ref === 'staging' ? 'dev' :
+              pr.base.ref === 'main' ? 'staging' : null;
+            if (!source) {
+              core.setFailed(`unsupported promotion target: ${pr.base.ref}`);
+              return;
+            }
+
+            const body = pr.body || '';
+            const sourceMatch = body.match(
+              new RegExp(`^Promotion source:\\s*${source}@([0-9a-f]{40})\\s*$`, 'mi')
+            );
+            const treeMatch = body.match(/^Promotion tree:\s*([0-9a-f]{40})\s*$/mi);
+            if (!sourceMatch || !treeMatch) {
+              core.setFailed('promotion PR needs exact `Promotion source:` and `Promotion tree:` lines');
+              return;
+            }
+            const sourceSha = sourceMatch[1];
+            const declaredTree = treeMatch[1];
+            const expectedHead = `promote/${source}-to-${pr.base.ref}-${sourceSha}`;
+            const expectedTitle = `chore: promote ${source} to ${pr.base.ref}`;
+            if (pr.head.repo.full_name !== `${owner}/${repo}` || pr.head.ref !== expectedHead) {
+              core.setFailed(`promotion head must be the internal branch ${expectedHead}`);
+              return;
+            }
+            if (pr.title !== expectedTitle) {
+              core.setFailed(`promotion title must be exactly: ${expectedTitle}`);
+              return;
+            }
+
+            const sourceRef = await github.rest.git.getRef({
+              owner, repo, ref: `heads/${source}`,
+            });
+            if (sourceRef.data.object.sha !== sourceSha) {
+              core.setFailed(`${source} advanced or the request was not bound to its exact head`);
+              return;
+            }
+            const [sourceCommit, headCommit] = await Promise.all([
+              github.rest.repos.getCommit({ owner, repo, ref: sourceSha }),
+              github.rest.repos.getCommit({ owner, repo, ref: pr.head.sha }),
+            ]);
+            const sourceTree = sourceCommit.data.commit.tree.sha;
+            const headTree = headCommit.data.commit.tree.sha;
+            if (declaredTree !== sourceTree || headTree !== sourceTree) {
+              core.setFailed('declared, source and promotion-head trees are not identical');
+              return;
+            }
+
+            const open = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', base: pr.base.ref, per_page: 100,
+            });
+            const promotions = open.filter(candidate =>
+              candidate.head.repo.full_name === `${owner}/${repo}` &&
+              candidate.head.ref.startsWith(`promote/${source}-to-${pr.base.ref}-`)
+            );
+            if (promotions.length !== 1 || promotions[0].number !== pr.number) {
+              core.setFailed(`expected exactly one open promotion to ${pr.base.ref}`);
+              return;
+            }
+            core.info(`exact promotion tree verified: ${source}@${sourceSha}`);
