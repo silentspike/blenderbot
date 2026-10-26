@@ -46,7 +46,7 @@ jobs:
       - name: No code/CI changes - skip the compile gate
         if: needs.changes.outputs.code != 'true'
         run: echo "No Python/config/CI changes in this PR - checks skipped."
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         if: needs.changes.outputs.code == 'true'
         with:
           python-version: ${{ env.PYTHON_VERSION }}
