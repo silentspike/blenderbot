@@ -1,0 +1,24 @@
+name: CI policy
+
+on:
+  pull_request:
+    branches: [dev, staging, main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-policy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: ci-policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.0
+      - name: Enforce the public Actions boundary
+        run: python3 tools/validate_ci_policy.py
